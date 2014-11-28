@@ -4,6 +4,9 @@ name = "photobomb"
 version = "0.0.1"
 authors = ["Edward Faulkner <ef@alum.mit.edu>"]
 
+[dependencies.tiny_http]
+git = "https://github.com/tomaka/tiny-http"
+
 [[bin]]
 
 name = "photobomb"
