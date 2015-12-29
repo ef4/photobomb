@@ -3,7 +3,6 @@ use std::io;
 use std::error::Error;
 
 extern crate image;
-use image::imageops::FilterType::Triangle;
 
 extern crate iron;
 use iron::prelude::*;
@@ -31,7 +30,7 @@ fn jpeg_type() -> Mime {
 
 fn make_thumbnail(filename: &str) -> MyImage {
     let original = image::open(&Path::new(filename)).unwrap();
-    MyImage(original.resize(100, 100, Triangle))
+    MyImage(original.resize(600, 600, image::imageops::FilterType::Lanczos3))
 }
 
 fn main() {
