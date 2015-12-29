@@ -66,8 +66,8 @@ fn main() {
         let size = get_integer_param(req, "size", 600);
         let thumbnail = log_time("make_thumbnail", || make_thumbnail(log_time("original.clone", ||original.clone()), size));
 
-        // This extra annotation seems like it should not be
-        // necessary, but it is.
+        // This cast is needed because Modifier<Result> is implemented
+        // for the trait object type Box<WriteBody + Send>.
         let b : Box<WriteBody + Send> = thumbnail;
 
         Ok(Response::with((content_type.clone(), status::Ok, b)))
