@@ -28,17 +28,26 @@ fn jpeg_type() -> Mime {
     "image/jpeg".parse::<Mime>().unwrap()
 }
 
-fn make_thumbnail(filename: &str) -> MyImage {
+fn make_thumbnail(filename: &str, size: u32) -> Box<MyImage> {
     let original = image::open(&Path::new(filename)).unwrap();
-    MyImage(original.resize(600, 600, image::imageops::FilterType::Lanczos3))
+    Box::new(MyImage(original.resize(size, size, image::imageops::FilterType::Lanczos3)))
 }
 
 fn main() {
+    const DEFAULT_SIZE : u32 = 600;
     let content_type = jpeg_type();
-    let thumbnail = make_thumbnail("test.jpg");
     
-    let closure = move |_: &mut Request| {
-        let b : Box<WriteBody + Send> = Box::new(thumbnail.clone());
+    let closure = move |req: &mut Request| {
+        let size = match req.url.query {
+            Some(ref query) =>
+                match query.parse::<u32>() {
+                    Ok(size) => size,
+                    Err(_) => DEFAULT_SIZE
+                },
+            None => DEFAULT_SIZE
+        };
+        let thumbnail = make_thumbnail("test.jpg", size);
+        let b : Box<WriteBody + Send> = thumbnail;
         Ok(Response::with((content_type.clone(), status::Ok, b)))
     };
     
