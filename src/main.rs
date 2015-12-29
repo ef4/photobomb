@@ -39,19 +39,13 @@ fn make_thumbnail(filename: &str, size: u32) -> Box<MyImage> {
 }
 
 fn get_integer_param(req: &mut Request, key : &str, default_value : u32) -> u32 {
-    match req.get_ref::<UrlEncodedQuery>() {
-        Ok(ref hashmap) => match hashmap.get(key) {
-            Some(values) => match values.get(0) {
-                Some(string_value) => match string_value.parse::<u32>() {
-                    Ok(result) => result,
-                    Err(_) => default_value
-                },
-                None => default_value
-            },
-            None => default_value
-        },
-        Err(_) => default_value
-    }
+    req.get_ref::<UrlEncodedQuery>().ok().and_then(|hashmap| {
+        hashmap.get(key)
+    }).and_then(|values| {
+        values.get(0)
+    }).and_then(|string_value| {
+        string_value.parse::<u32>().ok()
+    }).unwrap_or(default_value)
 }
 
 
