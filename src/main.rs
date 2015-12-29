@@ -1,3 +1,4 @@
+#![feature(slice_patterns, advanced_slice_patterns)]
 use std::path::Path;
 use std::io;
 use std::error::Error;
@@ -9,6 +10,10 @@ use iron::prelude::*;
 use iron::mime::Mime;
 use iron::status;
 use iron::response::WriteBody;
+
+extern crate urlencoded;
+use urlencoded::UrlEncodedQuery;
+
 
 #[derive(Clone)]
 struct MyImage(image::DynamicImage);
@@ -33,19 +38,29 @@ fn make_thumbnail(filename: &str, size: u32) -> Box<MyImage> {
     Box::new(MyImage(original.resize(size, size, image::imageops::FilterType::Lanczos3)))
 }
 
+fn get_integer_param(req: &mut Request, key : &str, default_value : u32) -> u32 {
+    match req.get_ref::<UrlEncodedQuery>() {
+        Ok(ref hashmap) => match hashmap.get(key) {
+            Some(values) => match values.get(0) {
+                Some(string_value) => match string_value.parse::<u32>() {
+                    Ok(result) => result,
+                    Err(_) => default_value
+                },
+                None => default_value
+            },
+            None => default_value
+        },
+        Err(_) => default_value
+    }
+}
+
+
 fn main() {
-    const DEFAULT_SIZE : u32 = 600;
     let content_type = jpeg_type();
     
     let closure = move |req: &mut Request| {
-        let size = match req.url.query {
-            Some(ref query) =>
-                match query.parse::<u32>() {
-                    Ok(size) => size,
-                    Err(_) => DEFAULT_SIZE
-                },
-            None => DEFAULT_SIZE
-        };
+
+        let size = get_integer_param(req, "size", 600);
         let thumbnail = make_thumbnail("test.jpg", size);
         let b : Box<WriteBody + Send> = thumbnail;
         Ok(Response::with((content_type.clone(), status::Ok, b)))
