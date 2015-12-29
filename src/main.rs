@@ -33,8 +33,7 @@ fn jpeg_type() -> Mime {
     "image/jpeg".parse::<Mime>().unwrap()
 }
 
-fn make_thumbnail(filename: &str, size: u32) -> Box<MyImage> {
-    let original = image::open(&Path::new(filename)).unwrap();
+fn make_thumbnail(original: image::DynamicImage, size: u32) -> Box<MyImage> {
     Box::new(MyImage(original.resize(size, size, image::imageops::FilterType::Lanczos3)))
 }
 
@@ -51,11 +50,11 @@ fn get_integer_param(req: &mut Request, key : &str, default_value : u32) -> u32 
 
 fn main() {
     let content_type = jpeg_type();
+    let original = image::open(&Path::new("test.jpg")).unwrap();
     
     let closure = move |req: &mut Request| {
-
         let size = get_integer_param(req, "size", 600);
-        let thumbnail = make_thumbnail("test.jpg", size);
+        let thumbnail = make_thumbnail(original.clone(), size);
         let b : Box<WriteBody + Send> = thumbnail;
         Ok(Response::with((content_type.clone(), status::Ok, b)))
     };
