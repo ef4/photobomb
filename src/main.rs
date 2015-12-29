@@ -1,3 +1,4 @@
+#![feature(time2)]
 use std::path::Path;
 use std::io;
 use std::error::Error;
@@ -13,6 +14,7 @@ use iron::response::WriteBody;
 extern crate urlencoded;
 use urlencoded::UrlEncodedQuery;
 
+use std::time::SystemTime;
 
 #[derive(Clone)]
 struct MyImage(image::DynamicImage);
@@ -36,6 +38,16 @@ fn make_thumbnail(original: image::DynamicImage, size: u32) -> Box<MyImage> {
     Box::new(MyImage(original.resize(size, size, image::imageops::FilterType::Lanczos3)))
 }
 
+fn log_time<T, R>(label: &str, operation: T) -> R
+    where T : Fn() -> R {
+        let start = SystemTime::now();
+        let output = operation();
+        let duration = start.elapsed().unwrap();
+        println!("{} {}ms", label, duration.as_secs() * 1000 + (duration.subsec_nanos() / 1000000) as u64);
+        output
+}
+
+
 fn get_integer_param(req: &mut Request, key : &str, default_value : u32) -> u32 {
     req.get_ref::<UrlEncodedQuery>().ok().and_then(|hashmap| {
         hashmap.get(key)
@@ -49,11 +61,10 @@ fn get_integer_param(req: &mut Request, key : &str, default_value : u32) -> u32 
 
 fn main() {
     let content_type = jpeg_type();
-    let original = image::open(&Path::new("test.jpg")).unwrap();
-    
+    let original = log_time("load original", || image::open(&Path::new("test.jpg")).unwrap());
     let closure = move |req: &mut Request| {
         let size = get_integer_param(req, "size", 600);
-        let thumbnail = make_thumbnail(original.clone(), size);
+        let thumbnail = log_time("make_thumbnail", || make_thumbnail(log_time("original.clone", ||original.clone()), size));
 
         // This extra annotation seems like it should not be
         // necessary, but it is.
