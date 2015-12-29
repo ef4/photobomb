@@ -1,4 +1,3 @@
-#![feature(slice_patterns, advanced_slice_patterns)]
 use std::path::Path;
 use std::io;
 use std::error::Error;
