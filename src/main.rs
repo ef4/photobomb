@@ -54,7 +54,11 @@ fn main() {
     let closure = move |req: &mut Request| {
         let size = get_integer_param(req, "size", 600);
         let thumbnail = make_thumbnail(original.clone(), size);
+
+        // This extra annotation seems like it should not be
+        // necessary, but it is.
         let b : Box<WriteBody + Send> = thumbnail;
+
         Ok(Response::with((content_type.clone(), status::Ok, b)))
     };
     
