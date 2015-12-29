@@ -1,36 +1,47 @@
-extern crate tiny_http;
-use std::io::fs;
+use std::path::Path;
+use std::io;
+use std::error::Error;
 
-fn server() {
-    let server = tiny_http::ServerBuilder::new().with_port(8181).build().unwrap();
+extern crate image;
+use image::imageops::FilterType::Triangle;
 
-    for request in server.incoming_requests() {
-        println!("received request! method: {}, url: {}, headers: {}",
-                 request.get_method(),
-                 request.get_url(),
-                 request.get_headers()
-                 );
+extern crate iron;
+use iron::prelude::*;
+use iron::mime::Mime;
+use iron::status;
+use iron::response::WriteBody;
 
-        let response = tiny_http::Response::from_string("hello world".to_string());
-        request.respond(response);
+#[derive(Clone)]
+struct MyImage(image::DynamicImage);
+
+impl WriteBody for MyImage {
+    fn write_body(&mut self, res: &mut iron::response::ResponseBody) -> io::Result<()> {
+        let &mut MyImage(ref i) = self;
+        match i.save(res, image::ImageFormat::JPEG) {
+            Ok(value) => Ok(value),
+            Err(image::ImageError::IoError(err)) => Err(err),
+            Err(image_err) => Err(io::Error::new(io::ErrorKind::Other, image_err.description()))
+        }
     }
 }
 
-fn walk() {
-    let path = Path::new("/Users/edward/Desktop/October 1988 - June 1989");
-    match fs::walk_dir(&path) {
-        Ok(ref mut dirs) => show_dirs(dirs),
-        Err(err) => println!("{}", err)
-    }
+fn jpeg_type() -> Mime {
+    "image/jpeg".parse::<Mime>().unwrap()
 }
 
-fn show_dirs(dirs : &mut fs::Directories) {
-    for dir in *dirs {
-        println!("{}", dir.display());
-    }
+fn make_thumbnail(filename: &str) -> MyImage {
+    let original = image::open(&Path::new(filename)).unwrap();
+    MyImage(original.resize(100, 100, Triangle))
 }
 
 fn main() {
-    walk();
-    server();
+    let content_type = jpeg_type();
+    let thumbnail = make_thumbnail("test.jpg");
+    
+    let closure = move |_: &mut Request| {
+        let b : Box<WriteBody + Send> = Box::new(thumbnail.clone());
+        Ok(Response::with((content_type.clone(), status::Ok, b)))
+    };
+    
+    Iron::new(closure).http("localhost:3000").unwrap();
 }
