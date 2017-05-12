@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 extern crate rocket;
 use rocket::response::{Stream,Content};
@@ -36,8 +36,19 @@ fn main() {
     rocket::ignite().mount("/", routes![index]).launch();
 }
 
-#[get("/")]
-fn index() -> io::Result<Content<Stream<io::Cursor<Vec<u8>>>>> {
-    let bytes = resize("test.jpg", 300)?;
+#[derive(FromForm)]
+struct ImageOptions {
+    fit: Option<usize>
+}
+
+
+#[get("/<filename>?<image_options>")]
+fn index(filename: &str, image_options: ImageOptions) -> io::Result<Content<Stream<io::Cursor<Vec<u8>>>>> {
+
+    let fit = match image_options.fit {
+        Some(pixels) => pixels,
+        None => 100
+    };
+    let bytes = resize(filename, fit)?;
     Ok(Content(ContentType::JPEG, Stream::from(io::Cursor::new(bytes))))
 }
