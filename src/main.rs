@@ -9,6 +9,7 @@ extern crate magick_rust;
 use magick_rust::{MagickWand, magick_wand_genesis};
 use std::sync::{Once, ONCE_INIT};
 use std::io;
+use std::path::PathBuf;
 use std::vec::Vec;
 
 // Used to make sure MagickWand is initialized exactly once. Note that we
@@ -27,10 +28,15 @@ fn _resize(filename: &str, fit: FitSize) -> Result<Vec<u8>, &'static str> {
 }
 
 // magick_rust returns string errors, which seems dubious and requires us to convert them.
-fn resize(filename: &str, fit: FitSize) -> io::Result<Vec<u8>> {
-    match _resize(filename, fit) {
-        Ok(bytes) => Ok(bytes),
-        Err(err_string) => Err(io::Error::new(io::ErrorKind::Other, err_string))
+fn resize(path: PathBuf, fit: FitSize) -> io::Result<Vec<u8>> {
+    match path.to_str() {
+        Some(filename) => {
+            match _resize(filename, fit) {
+                Ok(bytes) => Ok(bytes),
+                Err(err_string) => Err(io::Error::new(io::ErrorKind::Other, err_string))
+            }
+        },
+        None => Err(io::Error::new(io::ErrorKind::Other, "Not a valid path"))
     }
 }
 
@@ -65,17 +71,17 @@ fn default_options() -> ImageOptions {
 
 type ImageResponse = io::Result<Content<Stream<io::Cursor<Vec<u8>>>>>;
 
-#[get("/<filename>?<image_options>")]
-fn index(filename: &str, image_options: ImageOptions) -> ImageResponse {
+#[get("/<filename..>?<image_options>")]
+fn index(filename: PathBuf, image_options: ImageOptions) -> ImageResponse {
     transform_image(filename, image_options)
 }
 
-#[get("/<filename>")]
-fn index_defaults(filename: &str) -> ImageResponse {
+#[get("/<filename..>")]
+fn index_defaults(filename: PathBuf) -> ImageResponse {
     transform_image(filename, default_options())
 }
 
-fn transform_image(filename: &str, image_options: ImageOptions) -> ImageResponse {
+fn transform_image(filename: PathBuf, image_options: ImageOptions) -> ImageResponse {
     let bytes = resize(filename, image_options.fit)?;
     Ok(Content(ContentType::JPEG, Stream::from(io::Cursor::new(bytes))))
 }
