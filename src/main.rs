@@ -1,7 +1,7 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 extern crate rocket;
-use rocket::response::{Response,Content};
+use rocket::response::{Stream,Content};
 use rocket::http::ContentType;
 
 extern crate magick_rust;
@@ -37,7 +37,7 @@ fn main() {
 }
 
 #[get("/")]
-fn index() -> io::Result<Content<Response<'static>>> {
+fn index() -> io::Result<Content<Stream<io::Cursor<Vec<u8>>>>> {
     let bytes = resize()?;
-    Ok(Content(ContentType::JPEG, Response::build().sized_body(std::io::Cursor::new(bytes)).finalize()))
+    Ok(Content(ContentType::JPEG, Stream::from(io::Cursor::new(bytes))))
 }
