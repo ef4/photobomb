@@ -43,8 +43,7 @@ struct FitSize(usize);
 impl<'v> FromFormValue<'v> for FitSize {
     type Error = &'v str;
     fn from_form_value(form_value: &'v str) -> Result<FitSize, &'v str> {
-        let pixels = usize::from_form_value(form_value)?;
-        Ok(FitSize(pixels))
+        Ok(FitSize(usize::from_form_value(form_value)?))
     }
     fn default() -> Option<Self> {
         Some(FitSize(100))
@@ -64,15 +63,19 @@ fn default_options() -> ImageOptions {
     }
 }
 
+type ImageResponse = io::Result<Content<Stream<io::Cursor<Vec<u8>>>>>;
+
 #[get("/<filename>?<image_options>")]
-fn index(filename: &str, image_options: ImageOptions) -> io::Result<Content<Stream<io::Cursor<Vec<u8>>>>> {
-    let bytes = resize(filename, image_options.fit)?;
-    Ok(Content(ContentType::JPEG, Stream::from(io::Cursor::new(bytes))))
+fn index(filename: &str, image_options: ImageOptions) -> ImageResponse {
+    transform_image(filename, image_options)
 }
 
 #[get("/<filename>")]
-fn index_defaults(filename: &str) -> io::Result<Content<Stream<io::Cursor<Vec<u8>>>>> {
-    let image_options = default_options();
+fn index_defaults(filename: &str) -> ImageResponse {
+    transform_image(filename, default_options())
+}
+
+fn transform_image(filename: &str, image_options: ImageOptions) -> ImageResponse {
     let bytes = resize(filename, image_options.fit)?;
     Ok(Content(ContentType::JPEG, Stream::from(io::Cursor::new(bytes))))
 }
