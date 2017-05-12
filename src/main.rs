@@ -14,19 +14,19 @@ use std::vec::Vec;
 // do not bother shutting down, we simply exit when we're done.
 static START: Once = ONCE_INIT;
 
-fn _resize() -> Result<Vec<u8>, &'static str> {
+fn _resize(filename: &str, fit: usize) -> Result<Vec<u8>, &'static str> {
     START.call_once(|| {
         magick_wand_genesis();
     });
     let wand = MagickWand::new();
-    wand.read_image("test.jpg")?;
-    wand.fit(240, 240);
+    wand.read_image(filename)?;
+    wand.fit(fit, fit);
     wand.write_image_blob("JPG")
 }
 
 // magick_rust returns string errors, which seems dubious and requires us to convert them.
-fn resize() -> io::Result<Vec<u8>> {
-    match _resize() {
+fn resize(filename: &str, fit: usize) -> io::Result<Vec<u8>> {
+    match _resize(filename, fit) {
         Ok(bytes) => Ok(bytes),
         Err(err_string) => Err(io::Error::new(io::ErrorKind::Other, err_string))
     }
@@ -38,6 +38,6 @@ fn main() {
 
 #[get("/")]
 fn index() -> io::Result<Content<Stream<io::Cursor<Vec<u8>>>>> {
-    let bytes = resize()?;
+    let bytes = resize("test.jpg", 300)?;
     Ok(Content(ContentType::JPEG, Stream::from(io::Cursor::new(bytes))))
 }
