@@ -5,9 +5,9 @@ version = "0.0.1"
 authors = ["Edward Faulkner <ef@alum.mit.edu>"]
 
 [dependencies]
-image = { git = "https://github.com/PistonDevelopers/image", rev="c25708c9ae26a4c0857696dce8609a4695542fba" }
-iron = "*"
-urlencoded = "*"
+magick_rust = "*"
+rocket = "*"
+rocket_codegen = "*"
 
 [[bin]]
 name = "photobomb"
